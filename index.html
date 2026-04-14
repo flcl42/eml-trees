@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EML Function Remapper</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace" aria-labelledby="title">
+        <div class="intro">
+          <p class="eyebrow">Exp-Minus-Log compiler</p>
+          <h1 id="title">Remap formulas to EML trees.</h1>
+          <p class="lede">
+            Convert calculator-style expressions into the single operator
+            EML(x, y) = exp(x) - ln(y), then shorten repeated subtrees.
+          </p>
+        </div>
+
+        <div class="tool-grid">
+          <form class="editor" id="compiler-form">
+            <label for="formula-input">Formula</label>
+            <textarea id="formula-input" spellcheck="false">Log[x]</textarea>
+            <div class="controls">
+              <button type="submit">Remap to EML</button>
+              <label class="check">
+                <input id="optimize-input" type="checkbox" checked>
+                Simplify first
+              </label>
+              <label class="check">
+                <input id="alias-input" type="checkbox">
+                Use E alias
+              </label>
+            </div>
+            <p class="hint">
+              Use explicit operators: +, -, *, /, ^. Supported calls include
+              Sin[x], Log[x], Log[2, x], Sqrt[x], Hypot[x,y], Avg[x,y],
+              LogisticSigmoid[x], and EML[x,y].
+            </p>
+          </form>
+
+          <aside class="results" aria-live="polite">
+            <div class="status-line" id="status-line">Ready</div>
+            <dl class="metrics">
+              <div>
+                <dt>EML nodes</dt>
+                <dd id="metric-nodes">0</dd>
+              </div>
+              <div>
+                <dt>Depth</dt>
+                <dd id="metric-depth">0</dd>
+              </div>
+              <div>
+                <dt>Leaves</dt>
+                <dd id="metric-leaves">0</dd>
+              </div>
+            </dl>
+          </aside>
+        </div>
+      </section>
+
+      <section class="outputs" aria-label="Compiler output">
+        <div class="output-panel">
+          <div class="panel-head">
+            <h2>Optimized source</h2>
+            <button type="button" class="copy" data-copy="normalized-output">Copy</button>
+          </div>
+          <pre id="normalized-output"></pre>
+        </div>
+
+        <div class="output-panel">
+          <div class="panel-head">
+            <h2>Short EML</h2>
+            <button type="button" class="copy" data-copy="short-output">Copy</button>
+          </div>
+          <pre id="short-output"></pre>
+        </div>
+
+        <div class="output-panel wide">
+          <div class="panel-head">
+            <h2>Pure EML</h2>
+            <button type="button" class="copy" data-copy="pure-output">Copy</button>
+          </div>
+          <pre id="pure-output"></pre>
+        </div>
+
+        <div class="output-panel wide">
+          <div class="panel-head">
+            <h2>RPN</h2>
+            <button type="button" class="copy" data-copy="rpn-output">Copy</button>
+          </div>
+          <pre id="rpn-output"></pre>
+        </div>
+      </section>
+
+      <section class="reference">
+        <div>
+          <h2>Examples</h2>
+          <div class="examples" id="examples">
+            <button type="button" data-example="Log[x]">Log[x]</button>
+            <button type="button" data-example="Sin[x] + x^2/2">Sin[x] + x^2/2</button>
+            <button type="button" data-example="Hypot[x,y]">Hypot[x,y]</button>
+            <button type="button" data-example="Log[2, x]">Log[2, x]</button>
+            <button type="button" data-example="Exp[Sin[x]]/(1+x^2)">Exp[Sin[x]]/(1+x^2)</button>
+          </div>
+        </div>
+
+        <figure class="paper-figure">
+          <img
+            src="https://ar5iv.labs.arxiv.org/html/2603.21852/assets/x2.png"
+            alt="Binary EML tree examples from the arXiv paper"
+            loading="lazy">
+          <figcaption>
+            Tree examples from Andrzej Odrzywolek, arXiv:2603.21852v2.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="tree-section">
+        <div>
+          <h2>Tree preview</h2>
+          <p>
+            The preview clips deep trees, while the output blocks keep the full formula.
+          </p>
+        </div>
+        <div id="tree-preview" class="tree-preview" aria-label="EML tree preview"></div>
+      </section>
+
+      <section class="notes">
+        <h2>Source Notes</h2>
+        <p>
+          The page follows the paper's operator definition and the public EML compiler
+          convention: Exp[z] becomes EML[z,1], and Log[z] becomes
+          EML[1,EML[EML[1,z],1]]. Local simplification is conservative and does not
+          prove a globally shortest tree.
+        </p>
+        <p>
+          Paper:
+          <a href="https://arxiv.org/abs/2603.21852" target="_blank" rel="noreferrer">
+            All elementary functions from a single binary operator
+          </a>.
+          Companion code:
+          <a href="https://github.com/VA00/SymbolicRegressionPackage/tree/master/EML_toolkit/EmL_compiler" target="_blank" rel="noreferrer">
+            EML compiler toolkit
+          </a>.
+        </p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
