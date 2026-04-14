@@ -353,63 +353,110 @@ pre {
 
 .tree-section {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 18px;
   margin-top: 16px;
   padding: 18px;
 }
 
-.tree-preview {
-  min-height: 160px;
-  overflow: auto;
-  padding: 12px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 6px;
-  background: #fbfcfb;
-}
-
-.tree {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 8px;
-}
-
-.tree-node {
+.tree-copy {
   display: grid;
-  justify-items: center;
-  gap: 8px;
-  min-width: 54px;
+  align-content: start;
+  gap: 16px;
 }
 
-.tree-token {
-  min-width: 44px;
-  min-height: 34px;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
+.tree-depth-control {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  color: var(--ink);
+}
+
+.tree-depth-control span {
   display: inline-grid;
   place-items: center;
-  padding: 4px 8px;
-  background: var(--surface);
-  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
-  font-size: 0.82rem;
-  animation: settle 520ms ease both;
-}
-
-.tree-token.operator {
-  border-color: var(--accent);
+  min-width: 32px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
   color: var(--accent-strong);
-  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
-.tree-children {
-  display: flex;
-  gap: 12px;
+#tree-depth {
+  width: 100%;
+  accent-color: var(--accent);
 }
 
-.tree-clipped {
+.tree-preview {
+  min-height: 330px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #fbfcfb;
+  cursor: grab;
+  overscroll-behavior: contain;
+}
+
+.tree-preview:active {
+  cursor: grabbing;
+}
+
+.tree-svg {
+  display: block;
+  min-width: 100%;
+}
+
+.tree-edge {
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.tree-node-shape {
+  fill: var(--surface);
+  stroke: var(--line-strong);
+  stroke-width: 1.2;
+  filter: drop-shadow(0 5px 10px rgba(17, 20, 18, 0.06));
+}
+
+.tree-node-shape.operator {
+  fill: #eef8f5;
+  stroke: var(--accent);
+}
+
+.tree-node-shape.clipped {
+  stroke-dasharray: 4 4;
+}
+
+.tree-node-label {
+  fill: var(--ink);
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  font-weight: 750;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.tree-node-label.operator {
+  fill: var(--accent-strong);
+}
+
+.tree-node-note {
+  fill: var(--muted);
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  text-anchor: middle;
+}
+
+.tree-empty {
   color: var(--muted);
-  font-size: 0.84rem;
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  text-align: center;
 }
 
 .notes {

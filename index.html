@@ -118,13 +118,24 @@
       </section>
 
       <section class="tree-section">
-        <div>
-          <h2>Tree preview</h2>
+        <div class="tree-copy">
+          <div>
+            <h2>Tree preview</h2>
+            <p id="tree-summary">
+              Choose a formula to draw the root, visible branches, and clipped subtrees.
+            </p>
+          </div>
+          <label class="tree-depth-control" for="tree-depth">
+            Visible depth
+            <span id="tree-depth-label">5</span>
+          </label>
+          <input id="tree-depth" type="range" min="1" max="8" value="5">
           <p>
-            The preview clips deep trees, while the output blocks keep the full formula.
+            Drag horizontally inside the preview for wide trees. The output blocks keep
+            the full formula.
           </p>
         </div>
-        <div id="tree-preview" class="tree-preview" aria-label="EML tree preview"></div>
+        <div id="tree-preview" class="tree-preview" aria-label="EML tree preview" tabindex="0"></div>
       </section>
 
       <section class="notes">

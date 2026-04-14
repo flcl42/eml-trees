@@ -977,6 +977,10 @@
     const pureOutput = document.getElementById("pure-output");
     const rpnOutput = document.getElementById("rpn-output");
     const treePreview = document.getElementById("tree-preview");
+    const treeDepth = document.getElementById("tree-depth");
+    const treeDepthLabel = document.getElementById("tree-depth-label");
+    const treeSummary = document.getElementById("tree-summary");
+    let currentTree = null;
 
     function run() {
       try {
@@ -992,8 +996,12 @@
         depth.textContent = result.metrics.depth.toString();
         leaves.textContent = result.metrics.leaves.toString();
         setStatus(`Compiled ${result.metrics.nodes} EML node(s).`, false);
-        renderTree(result.eml, treePreview);
+        currentTree = result.eml;
+        renderTree(currentTree, treePreview, treeSummary, Number(treeDepth.value));
       } catch (error) {
+        currentTree = null;
+        treeSummary.textContent = "Fix the formula to update the tree preview.";
+        showTreeMessage(treePreview, "No tree for the current formula.");
         setStatus(error.message, true);
       }
     }
@@ -1014,6 +1022,10 @@
     optimize.addEventListener("change", run);
     alias.addEventListener("change", run);
     input.addEventListener("input", debounce(run, 240));
+    treeDepth.addEventListener("input", () => {
+      treeDepthLabel.textContent = treeDepth.value;
+      if (currentTree) renderTree(currentTree, treePreview, treeSummary, Number(treeDepth.value));
+    });
 
     document.getElementById("examples").addEventListener("click", (event) => {
       const button = event.target.closest("[data-example]");
@@ -1033,6 +1045,7 @@
       });
     });
 
+    enableTreeDrag(treePreview);
     run();
   }
 
@@ -1060,42 +1073,204 @@
     area.remove();
   }
 
-  function renderTree(root, container) {
-    container.replaceChildren(buildTreeNode(root, 0, 4));
+  function showTreeMessage(container, message) {
+    const empty = document.createElement("div");
+    empty.className = "tree-empty";
+    empty.textContent = message;
+    container.replaceChildren(empty);
   }
 
-  function buildTreeNode(node, depth, maxDepth) {
-    const wrap = document.createElement("div");
-    wrap.className = "tree-node";
+  function enableTreeDrag(container) {
+    let startX = 0;
+    let startY = 0;
+    let left = 0;
+    let top = 0;
+    let active = false;
 
-    const token = document.createElement("span");
-    token.className = node.type === "eml" ? "tree-token operator" : "tree-token";
-    token.textContent = node.type === "eml" ? "EML" : node.value;
-    wrap.append(token);
+    container.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      active = true;
+      startX = event.clientX;
+      startY = event.clientY;
+      left = container.scrollLeft;
+      top = container.scrollTop;
+      container.setPointerCapture(event.pointerId);
+    });
 
-    if (node.type === "eml") {
-      if (depth >= maxDepth) {
-        const clipped = document.createElement("span");
-        clipped.className = "tree-clipped";
-        clipped.textContent = "clipped";
-        wrap.append(clipped);
-      } else {
-        const children = document.createElement("div");
-        children.className = "tree-children";
-        children.append(buildTreeNode(node.left, depth + 1, maxDepth));
-        children.append(buildTreeNode(node.right, depth + 1, maxDepth));
-        wrap.append(children);
+    container.addEventListener("pointermove", (event) => {
+      if (!active) return;
+      container.scrollLeft = left - (event.clientX - startX);
+      container.scrollTop = top - (event.clientY - startY);
+    });
+
+    container.addEventListener("pointerup", () => {
+      active = false;
+    });
+
+    container.addEventListener("pointercancel", () => {
+      active = false;
+    });
+  }
+
+  function renderTree(root, container, summary, maxDepth = 5) {
+    const full = emlMetrics(root);
+    if (root.type === "leaf") {
+      summary.textContent = `Single leaf output: ${root.value}.`;
+    }
+
+    const layout = createTreeLayout(root, 0, maxDepth);
+    const placed = placeTree(layout);
+    const visible = countVisibleTree(placed);
+    const svg = drawTreeSvg(placed, visible);
+
+    if (root.type !== "leaf") {
+      summary.textContent =
+        `Showing ${visible.operators} of ${full.nodes} EML nodes at depth ${maxDepth}; ` +
+        `${visible.clipped} branch${visible.clipped === 1 ? "" : "es"} clipped.`;
+    }
+
+    container.replaceChildren(svg);
+  }
+
+  function createTreeLayout(node, depth, maxDepth) {
+    const clipped = node.type === "eml" && depth >= maxDepth;
+    const item = {
+      node,
+      depth,
+      clipped,
+      hidden: clipped ? hiddenTreeCount(node) : 0,
+      children: [],
+      width: 1,
+      x: 0,
+      y: 0,
+    };
+
+    if (node.type === "eml" && !clipped) {
+      item.children = [
+        createTreeLayout(node.left, depth + 1, maxDepth),
+        createTreeLayout(node.right, depth + 1, maxDepth),
+      ];
+      item.width = item.children[0].width + item.children[1].width;
+    }
+
+    return item;
+  }
+
+  function hiddenTreeCount(node) {
+    const metrics = emlMetrics(node);
+    return Math.max(0, metrics.nodes + metrics.leaves - 1);
+  }
+
+  function placeTree(layout) {
+    const slotX = 84;
+    const slotY = 88;
+    const pad = 44;
+
+    function assign(item, offset) {
+      item.y = pad + item.depth * slotY;
+      if (item.children.length === 0) {
+        item.x = pad + offset + slotX / 2;
+        return;
       }
+      assign(item.children[0], offset);
+      assign(item.children[1], offset + item.children[0].width * slotX);
+      item.x = (item.children[0].x + item.children[1].x) / 2;
     }
 
-    if (depth === 0) {
-      const rootWrap = document.createElement("div");
-      rootWrap.className = "tree";
-      rootWrap.append(wrap);
-      return rootWrap;
+    assign(layout, 0);
+    layout.svgWidth = Math.max(360, layout.width * slotX + pad * 2);
+    layout.svgHeight = maxTreeDepth(layout) * slotY + pad * 2 + 42;
+    return layout;
+  }
+
+  function maxTreeDepth(layout) {
+    if (layout.children.length === 0) return layout.depth;
+    return Math.max(...layout.children.map(maxTreeDepth));
+  }
+
+  function countVisibleTree(layout) {
+    const count = {
+      operators: layout.node.type === "eml" ? 1 : 0,
+      leaves: layout.node.type === "leaf" ? 1 : 0,
+      clipped: layout.clipped ? 1 : 0,
+    };
+    for (const child of layout.children) {
+      const childCount = countVisibleTree(child);
+      count.operators += childCount.operators;
+      count.leaves += childCount.leaves;
+      count.clipped += childCount.clipped;
+    }
+    return count;
+  }
+
+  function drawTreeSvg(layout) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "tree-svg");
+    svg.setAttribute("width", String(layout.svgWidth));
+    svg.setAttribute("height", String(layout.svgHeight));
+    svg.setAttribute("viewBox", `0 0 ${layout.svgWidth} ${layout.svgHeight}`);
+    svg.setAttribute("role", "img");
+
+    const title = document.createElementNS(ns, "title");
+    title.textContent = "Visible EML expression tree";
+    svg.append(title);
+
+    const edges = document.createElementNS(ns, "g");
+    const nodes = document.createElementNS(ns, "g");
+    svg.append(edges, nodes);
+    drawEdges(layout, edges, ns);
+    drawNodes(layout, nodes, ns);
+    return svg;
+  }
+
+  function drawEdges(item, parent, ns) {
+    for (const child of item.children) {
+      const edge = document.createElementNS(ns, "path");
+      const midY = item.y + (child.y - item.y) * 0.58;
+      edge.setAttribute("class", "tree-edge");
+      edge.setAttribute("fill", "none");
+      edge.setAttribute("d", `M${item.x} ${item.y + 22} C${item.x} ${midY}, ${child.x} ${midY}, ${child.x} ${child.y - 22}`);
+      parent.append(edge);
+      drawEdges(child, parent, ns);
+    }
+  }
+
+  function drawNodes(item, parent, ns) {
+    const group = document.createElementNS(ns, "g");
+    const isOperator = item.node.type === "eml";
+    const label = isOperator ? "EML" : item.node.value;
+    const shape = document.createElementNS(ns, "rect");
+    const text = document.createElementNS(ns, "text");
+    const width = Math.max(54, Math.min(76, label.length * 9 + 20));
+
+    group.setAttribute("transform", `translate(${item.x}, ${item.y})`);
+    shape.setAttribute("x", String(-width / 2));
+    shape.setAttribute("y", "-20");
+    shape.setAttribute("width", String(width));
+    shape.setAttribute("height", "40");
+    shape.setAttribute("rx", "6");
+    shape.setAttribute("class", `tree-node-shape${isOperator ? " operator" : ""}${item.clipped ? " clipped" : ""}`);
+
+    text.setAttribute("class", `tree-node-label${isOperator ? " operator" : ""}`);
+    text.textContent = clipLabel(label, 8);
+
+    group.append(shape, text);
+
+    if (item.clipped) {
+      const note = document.createElementNS(ns, "text");
+      note.setAttribute("class", "tree-node-note");
+      note.setAttribute("y", "34");
+      note.textContent = `+${item.hidden}`;
+      group.append(note);
     }
 
-    return wrap;
+    parent.append(group);
+    for (const child of item.children) drawNodes(child, parent, ns);
+  }
+
+  function clipLabel(label, max) {
+    return label.length > max ? `${label.slice(0, max - 1)}.` : label;
   }
 
   const api = {
